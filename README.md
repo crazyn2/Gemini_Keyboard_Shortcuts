@@ -35,6 +35,9 @@ Example:
 | Shortcut (Mac/Windows) | Action |
 |---|---|
 | ⌥/Alt + N | Open new chat |
+| ⌥/Alt + A | Scroll Up One Message |
+| ⌥/Alt + F | Scroll Down One Message |
+| PgUp/PgDn | PageUp + PageDown Takeover |
 | ⌘/Ctrl + Shift + Backspace | Delete chat |
 | ⌥/Alt + S | Toggle sidebar |
 | ⌥/Alt + 0-9 | Go to nth chat |
@@ -72,6 +75,6 @@ Example:
 | Shortcut (Mac/Windows) | Action |
 |---|---|
 | ⌘/Ctrl + Shift + K | Stop/start generation |
-| ⌘/Ctrl + Shift + Y | Play/pause audio |
+| ⌥/Alt + Y | Play/pause audio |
 | ⌘/Ctrl + Shift + S | Voice to text |
 | ⌘/Ctrl + O | Open file |
