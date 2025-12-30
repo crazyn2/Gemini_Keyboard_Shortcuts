@@ -90,12 +90,12 @@
         },
         timings: { rapidClickDelayMS: 100 },
         hotkeys: {
-            scrollNav:    { up: 'a', down: 'f', alt: true }, // Alt + Up/Down
-            newChat:      { key: 'n', shift: false, cmdOrCtrl: false, alt: true },
-            sidebarToggle:{ key: 's', shift: false, cmdOrCtrl: false, alt: true },
-            openFile:     { key: 'o', shift: false, cmdOrCtrl: true },
+            scrollNav: { up: 'a', down: 'f', alt: true }, // Alt + Up/Down
+            newChat: { key: 'n', shift: false, cmdOrCtrl: false, alt: true },
+            sidebarToggle: { key: 's', shift: false, cmdOrCtrl: false, alt: true },
+            openFile: { key: 'o', shift: false, cmdOrCtrl: true },
             // Help accepts '?' OR '/' with Shift OR code 'Slash'
-            showHelp:     { key: '?', shift: true,  cmdOrCtrl: true, altKeys: ['/', '?'], codes: ['Slash'] },
+            showHelp: { key: '?', shift: true, cmdOrCtrl: true, altKeys: ['/', '?'], codes: ['Slash'] },
         },
         selectors: {
             messageTurn: 'user-query',
@@ -139,9 +139,9 @@
             codeTTSButton: '.response-tts-container button',
             editorCancel: '[aria-label*="Cancel"]',
             hideDuringCopy:
-            '.code-block-decoration.footer, .code-block-decoration.header, .table-footer',
+                '.code-block-decoration.footer, .code-block-decoration.header, .table-footer',
             hideDuringCopyRestore:
-            '.code-block-decoration.footer, .code-block-decoration.header',
+                '.code-block-decoration.footer, .code-block-decoration.header',
         },
     };
 
@@ -173,10 +173,10 @@
         // 2. 如果页面上没有消息(新对话)或找不到，尝试查找 <main> 或 infinite-scroller
         const potentialScrollers = document.querySelectorAll(CFG.selectors.scrollContainer);
         for (const el of potentialScrollers) {
-             const style = window.getComputedStyle(el);
-             if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
-                 return el;
-             }
+            const style = window.getComputedStyle(el);
+            if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+                return el;
+            }
         }
 
         // 3. 最后的回退
@@ -205,7 +205,7 @@
         if (turns.length === 0) return;
 
         // 阈值：避开顶部固定的 header 区域
-        const threshold = 80; 
+        const threshold = 80;
         let target = null;
 
         if (direction === 1) {
@@ -236,6 +236,54 @@
         }
     }
 
+    function scrollToCurrentResponseBottom() {
+        // 1. 获取所有回答文本
+        const responses = Array.from(document.querySelectorAll(CFG.selectors.modelResponseText));
+        if (!responses.length) return;
+
+        const viewCenter = window.innerHeight / 2;
+
+        // 2. 找到当前视线焦点的回答（依据文本位置判断）
+        let targetText = responses.find(el => {
+            const rect = el.getBoundingClientRect();
+            return rect.top <= viewCenter && rect.bottom >= viewCenter;
+        });
+
+        if (!targetText) {
+            targetText = responses.reduce((closest, curr) => {
+                const rect = curr.getBoundingClientRect();
+                const dist = Math.abs((rect.top + rect.height / 2) - viewCenter);
+                return dist < closest.dist ? { el: curr, dist: dist } : closest;
+            }, { el: null, dist: Infinity }).el;
+        }
+
+        // 3. 滚动操作
+        if (targetText) {
+            // 【核心修正】：使用 closest('model-response') 向上找到包含“内容+按钮”的完整容器
+            // 之前的 parentElement 漏掉了下方的 button-container
+            const container = targetText.closest('model-response');
+
+            if (container) {
+                const scroller = getScrollContainer();
+                const rect = container.getBoundingClientRect();
+
+                // 底部预留高度：输入框高度(约120px) + 缓冲(60px) = 180px
+                const bottomOffset = 180;
+                const windowHeight = window.innerHeight;
+
+                // 计算滚动距离：让 container 的底部停在距离窗口底部 180px 的位置
+                const scrollAmount = rect.bottom - (windowHeight - bottomOffset);
+
+                // 执行滚动
+                if (scroller === document.documentElement) {
+                    window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                } else {
+                    scroller.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                }
+            }
+        }
+    }
+
     function onLoad() {
         // ----- CSS tweaks (minimal & intentional) -----
         const s = document.createElement('style');
@@ -253,7 +301,7 @@
     `;
         // NOTE: Per feedback, do NOT force-position the model switcher.
 
-        const nums = ['first','second','third','fourth','fifth','sixth','seventh','eighth','ninth','tenth'];
+        const nums = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
 
         // Ensure "Show more" expanded & support ?q=
         let showMoreClicked = false;
@@ -345,7 +393,7 @@
             range.selectNodeContents(element);
             selection.removeAllRanges();
             selection.addRange(range);
-            try { document.execCommand('copy'); } catch (_) {}
+            try { document.execCommand('copy'); } catch (_) { }
             selection.removeAllRanges();
 
             setTimeout(() => {
@@ -371,13 +419,13 @@
         transition:opacity ${tDuration}ms ease-in-out, transform ${tDuration}ms ease-in-out;
         transform-origin:center bottom; transform:scale(.8); opacity:0; max-width:calc(100% - 52px); box-sizing:border-box;
       `;
-          document.body.appendChild(div);
-          setTimeout(() => { div.style.opacity = '1'; div.style.transform = 'scale(1)'; }, 10);
-          setTimeout(() => {
-              div.style.opacity = '0'; div.style.transform = 'scale(.8)';
-              setTimeout(() => { if (div.parentNode) div.remove(); }, tDuration);
-          }, tLeft);
-      }
+            document.body.appendChild(div);
+            setTimeout(() => { div.style.opacity = '1'; div.style.transform = 'scale(1)'; }, 10);
+            setTimeout(() => {
+                div.style.opacity = '0'; div.style.transform = 'scale(.8)';
+                setTimeout(() => { if (div.parentNode) div.remove(); }, tDuration);
+            }, tLeft);
+        }
 
         function simulateClick(el) { if (el) el.click(); else throw new Error('Element not found for click().'); }
 
@@ -477,10 +525,10 @@
         // ====== Sidebar Toggle ======
         function toggleSidebar() {
             const toggle =
-                  document.querySelector(CFG.selectors.sidebarHide) ||
-                  document.querySelector(CFG.selectors.sidebarShow) ||
-                  document.querySelector(CFG.selectors.mainMenu) ||
-                  document.querySelector(CFG.selectors.menuToggleButton);
+                document.querySelector(CFG.selectors.sidebarHide) ||
+                document.querySelector(CFG.selectors.sidebarShow) ||
+                document.querySelector(CFG.selectors.mainMenu) ||
+                document.querySelector(CFG.selectors.menuToggleButton);
 
             if (toggle) simulateClick(toggle);
             else {
@@ -540,13 +588,18 @@
                 return;
             }
             if (event.altKey && key === 'a') {
-                    event.preventDefault();
-                    scrollToMessageTurn(-1);
-                    return;
-                }
+                event.preventDefault();
+                scrollToMessageTurn(-1);
+                return;
+            }
             if (event.altKey && key === 'f') {
                 event.preventDefault();
                 scrollToMessageTurn(1);
+                return;
+            }
+            if (event.altKey && key === 'g') {
+                event.preventDefault();
+                scrollToCurrentResponseBottom(); // 调用新函数
                 return;
             }
             if (event.altKey && key === 'n') {
@@ -578,7 +631,7 @@
                 event.preventDefault();
                 return;
             }
-        
+
             // Cancel edit (Esc while editing)
             if (key === 'escape' && !event.shiftKey && activeEl?.getAttribute('aria-label')?.includes('Edit prompt')) {
                 const cancel = getLastElement(CFG.selectors.editorCancel);
@@ -600,7 +653,7 @@
             if (isCmdOrCtrl && !event.shiftKey && key === CFG.hotkeys.openFile.key) {
                 event.preventDefault();
                 const upBtn = document.querySelector(CFG.selectors.uploadButtonPrimary)
-                || document.querySelector(CFG.selectors.uploadButtonAlt);
+                    || document.querySelector(CFG.selectors.uploadButtonAlt);
                 if (upBtn) simulateClick(upBtn);
                 return;
             }
@@ -636,7 +689,7 @@
                         chatIndex = Array.from(document.querySelectorAll(CFG.selectors.conversation))
                             .indexOf(document.querySelector(CFG.selectors.selectedConversation));
                         const actions = document.querySelector('.conversation.selected')
-                        ?.parentElement?.querySelector(CFG.selectors.actionsMenuButton);
+                            ?.parentElement?.querySelector(CFG.selectors.actionsMenuButton);
                         simulateClick(actions);
                         setTimeout(() => {
                             simulateClick(document.body.querySelector(CFG.selectors.deleteButton));
@@ -770,89 +823,94 @@
         #gemini-help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2147483646;display:flex;justify-content:center;align-items:center}
       `;
 
-          const close = document.createElement('button'); close.className = 'close-button'; close.title = 'Close (Esc)'; close.textContent = '×';
-          const title = document.createElement('h2'); title.textContent = 'Gemini Keyboard Shortcuts Help';
-          const intro = document.createElement('p'); intro.appendChild(document.createTextNode('Press '));
-          const esc = document.createElement('code'); esc.textContent = 'Esc';
-          intro.appendChild(esc); intro.appendChild(document.createTextNode(" or click the 'X' to close this window."));
+            const close = document.createElement('button'); close.className = 'close-button'; close.title = 'Close (Esc)'; close.textContent = '×';
+            const title = document.createElement('h2'); title.textContent = 'Gemini Keyboard Shortcuts Help';
+            const intro = document.createElement('p'); intro.appendChild(document.createTextNode('Press '));
+            const esc = document.createElement('code'); esc.textContent = 'Esc';
+            intro.appendChild(esc); intro.appendChild(document.createTextNode(" or click the 'X' to close this window."));
 
-          const section = (label, rows) => {
-              const h3 = document.createElement('h3'); h3.textContent = label; popup.appendChild(h3);
-              const table = document.createElement('table');
-              const thead = table.createTHead(); const tr = thead.insertRow();
-              const th1 = document.createElement('th'); th1.textContent = 'Shortcut (Mac/Windows)'; tr.appendChild(th1);
-              const th2 = document.createElement('th'); th2.textContent = 'Action'; tr.appendChild(th2);
-              const tbody = table.createTBody();
-              rows.forEach(r => { const row = tbody.insertRow(); const c1 = row.insertCell(); const c2 = row.insertCell();
-                                 const code = document.createElement('code'); code.textContent = r.key; c1.appendChild(code); c2.textContent = r.action; });
-              popup.appendChild(table);
-          };
+            const section = (label, rows) => {
+                const h3 = document.createElement('h3'); h3.textContent = label; popup.appendChild(h3);
+                const table = document.createElement('table');
+                const thead = table.createTHead(); const tr = thead.insertRow();
+                const th1 = document.createElement('th'); th1.textContent = 'Shortcut (Mac/Windows)'; tr.appendChild(th1);
+                const th2 = document.createElement('th'); th2.textContent = 'Action'; tr.appendChild(th2);
+                const tbody = table.createTBody();
+                rows.forEach(r => {
+                    const row = tbody.insertRow(); const c1 = row.insertCell(); const c2 = row.insertCell();
+                    const code = document.createElement('code'); code.textContent = r.key; c1.appendChild(code); c2.textContent = r.action;
+                });
+                popup.appendChild(table);
+            };
 
-          popup.appendChild(style); popup.appendChild(close); popup.appendChild(title); popup.appendChild(intro);
+            popup.appendChild(style); popup.appendChild(close); popup.appendChild(title); popup.appendChild(intro);
 
-          section('Chat Management', [
-              { key: '⌥/Alt + N', action: 'Open new chat' },        // UPDATED
-              { key: '⌘/Ctrl + Shift + Backspace', action: 'Delete chat' },
-              { key: '⌥/Alt + S', action: 'Hide/Show sidebar' },            // stays
-              { key: '⌥/Alt + 1–9', action: 'Go to nth chat' },
-              { key: '⌘/Ctrl + Shift + =', action: 'Next chat' },
-              { key: '⌘/Ctrl + Shift + –', action: 'Previous chat' },
-          ]);
+            section('Chat Management', [
+                { key: '⌥/Alt + N', action: 'Open new chat' },        // UPDATED
+                { key: '⌘/Ctrl + Shift + Backspace', action: 'Delete chat' },
+                { key: '⌥/Alt + S', action: 'Hide/Show sidebar' },
+                { key: '⌥/Alt + A', action: 'Scroll Up One Message' },
+                { key: '⌥/Alt + F', action: 'Scroll Down One Message' },
+                { key: '⌥/Alt + G', action: 'Scroll to Bottom of Current Response' },
+                { key: '⌥/Alt + 1–9', action: 'Go to nth chat' },
+                { key: '⌘/Ctrl + Shift + =', action: 'Next chat' },
+                { key: '⌘/Ctrl + Shift + –', action: 'Previous chat' },
+            ]);
 
-          section('Text Input and Editing', [
-              { key: 'Shift + Esc', action: 'Focus chat input' },
-              { key: '⌘/Ctrl + Shift + E', action: 'Edit text' },
-              { key: '⌘/Ctrl + Shift + ;', action: 'Copy last code block' },
-              { key: "⌘/Ctrl + Shift + '", action: 'Copy second-to-last code block' },
-              { key: '⌘/Ctrl + Shift + C', action: 'Copy response' },
-              { key: '⌘/Ctrl + Shift + K', action: 'Stop/start generation' },
-          ]);
+            section('Text Input and Editing', [
+                { key: 'Shift + Esc', action: 'Focus chat input' },
+                { key: '⌘/Ctrl + Shift + E', action: 'Edit text' },
+                { key: '⌘/Ctrl + Shift + ;', action: 'Copy last code block' },
+                { key: "⌘/Ctrl + Shift + '", action: 'Copy second-to-last code block' },
+                { key: '⌘/Ctrl + Shift + C', action: 'Copy response' },
+                { key: '⌘/Ctrl + Shift + K', action: 'Stop/start generation' },
+            ]);
 
-          section('Draft Navigation', [
-              { key: '⌘/Ctrl + Shift + D', action: 'Generate more drafts' },
-              { key: '⌘/Ctrl + Shift + ,', action: 'Next draft' },
-              { key: '⌘/Ctrl + Shift + .', action: 'Previous draft' },
-          ]);
+            section('Draft Navigation', [
+                { key: '⌘/Ctrl + Shift + D', action: 'Generate more drafts' },
+                { key: '⌘/Ctrl + Shift + ,', action: 'Next draft' },
+                { key: '⌘/Ctrl + Shift + .', action: 'Previous draft' },
+            ]);
 
-          section('Sharing and Linking', [
-              { key: '⌘/Ctrl + Shift + L', action: 'Copy prompt/response link' },
-              { key: '⌘/Ctrl + Shift + M', action: 'Copy chat link' },
-          ]);
+            section('Sharing and Linking', [
+                { key: '⌘/Ctrl + Shift + L', action: 'Copy prompt/response link' },
+                { key: '⌘/Ctrl + Shift + M', action: 'Copy chat link' },
+            ]);
 
-          section('Audio and File Shortcuts', [
-              { key: '⌥/Alt + Y', action: 'Play/pause audio' },
-              { key: '⌘/Ctrl + Shift + S', action: 'Voice to text' },
-              { key: '⌘/Ctrl + O', action: 'Open file' },
-          ]);
+            section('Audio and File Shortcuts', [
+                { key: '⌥/Alt + Y', action: 'Play/pause audio' },
+                { key: '⌘/Ctrl + Shift + S', action: 'Voice to text' },
+                { key: '⌘/Ctrl + O', action: 'Open file' },
+            ]);
 
-          section('Other', [
-              { key: '⌘/Ctrl + Shift + ?', action: 'Show this help' },
-              { key: 'Ctrl + 1–9/0', action: 'Switch Model (if available)' },
-          ]);
+            section('Other', [
+                { key: '⌘/Ctrl + Shift + ?', action: 'Show this help' },
+                { key: 'Ctrl + 1–9/0', action: 'Switch Model (if available)' },
+            ]);
 
-          const h3 = document.createElement('h3'); h3.textContent = 'Disabling the Script'; popup.appendChild(h3);
-          const p = document.createElement('p'); p.textContent = 'To temporarily or permanently disable these shortcuts:'; popup.appendChild(p);
-          const ol = document.createElement('ol');
-          [
-              'Open the Tampermonkey extension menu in your browser.',
-              'Go to the "Dashboard".',
-              'Find the script named "Gemini Keyboard Shortcuts".',
-              'Toggle the switch next to the script name to disable it.',
-          ].forEach(t => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
-          popup.appendChild(ol);
+            const h3 = document.createElement('h3'); h3.textContent = 'Disabling the Script'; popup.appendChild(h3);
+            const p = document.createElement('p'); p.textContent = 'To temporarily or permanently disable these shortcuts:'; popup.appendChild(p);
+            const ol = document.createElement('ol');
+            [
+                'Open the Tampermonkey extension menu in your browser.',
+                'Go to the "Dashboard".',
+                'Find the script named "Gemini Keyboard Shortcuts".',
+                'Toggle the switch next to the script name to disable it.',
+            ].forEach(t => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
+            popup.appendChild(ol);
 
-          const closePopup = () => { overlay.remove(); document.removeEventListener('keydown', escListener); };
-          const escListener = (e) => { if ((e.key || '').toLowerCase() === 'escape') closePopup(); };
+            const closePopup = () => { overlay.remove(); document.removeEventListener('keydown', escListener); };
+            const escListener = (e) => { if ((e.key || '').toLowerCase() === 'escape') closePopup(); };
 
-          overlay.addEventListener('click', (e) => { if (e.target === overlay) closePopup(); });
-          close.addEventListener('click', closePopup);
-          document.addEventListener('keydown', escListener);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) closePopup(); });
+            close.addEventListener('click', closePopup);
+            document.addEventListener('keydown', escListener);
 
-          const style2 = document.createElement('style'); style2.textContent = `#gemini-help-popup{background:#202124}`;
-          overlay.appendChild(style2);
-          overlay.appendChild(popup);
-          document.body.appendChild(overlay);
-      }
+            const style2 = document.createElement('style'); style2.textContent = `#gemini-help-popup{background:#202124}`;
+            overlay.appendChild(style2);
+            overlay.appendChild(popup);
+            document.body.appendChild(overlay);
+        }
         // ===== End Help Popup =====
     }
 })();

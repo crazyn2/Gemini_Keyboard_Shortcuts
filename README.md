@@ -35,11 +35,12 @@ Example:
 | Shortcut (Mac/Windows) | Action |
 |---|---|
 | ⌥/Alt + N | Open new chat |
-| ⌥/Alt + A | Scroll Up One Message |
-| ⌥/Alt + F | Scroll Down One Message |
 | PgUp/PgDn | PageUp + PageDown Takeover |
 | ⌘/Ctrl + Shift + Backspace | Delete chat |
 | ⌥/Alt + S | Toggle sidebar |
+| ⌥/Alt + A | Scroll Up One Message |
+| ⌥/Alt + F | Scroll Down One Message |
+| ⌥/Alt + G | Scroll to Bottom of Current Response |
 | ⌥/Alt + 0-9 | Go to nth chat |
 | ⌘/Ctrl + Shift + = | Next chat |
 | ⌘/Ctrl + Shift + – | Previous chat |
