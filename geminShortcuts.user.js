@@ -189,12 +189,14 @@
         if (container === document.documentElement) {
             window.scrollBy({
                 top: window.innerHeight * 0.85 * direction,
-                behavior: 'smooth'
+                behavior: 'smooth',
+                __bypassLock: true,
             });
         } else {
             container.scrollBy({
                 top: container.clientHeight * 0.85 * direction,
-                behavior: 'smooth'
+                behavior: 'smooth',
+                __bypassLock: true,
             });
         }
     }
@@ -224,14 +226,14 @@
         }
 
         if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            target.scrollIntoView({ behavior: 'smooth', block: 'start', __bypassLock: true });
         } else {
             // 边缘情况处理：如果找不到目标，说明已经到底或到顶
             const container = getScrollContainer();
             if (direction === -1) {
-                container.scrollTo({ top: 0, behavior: 'smooth' });
+                container.scrollTo({ top: 0, behavior: 'smooth', __bypassLock: true });
             } else {
-                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth', __bypassLock: true });
             }
         }
     }
@@ -276,9 +278,9 @@
 
                 // 执行滚动
                 if (scroller === document.documentElement) {
-                    window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                    window.scrollBy({ top: scrollAmount, behavior: 'smooth', __bypassLock: true });
                 } else {
-                    scroller.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                    scroller.scrollBy({ top: scrollAmount, behavior: 'smooth', __bypassLock: true });
                 }
             }
         }
@@ -561,6 +563,11 @@
             const isCmdOrCtrl = (isMac && event.metaKey) || (!isMac && event.ctrlKey);
             const activeEl = document.activeElement;
 
+            // Ignore plain Ctrl/Cmd+S so it doesn't trigger the Alt+S sidebar toggle.
+            if ((event.ctrlKey || event.metaKey) && !event.shiftKey && key === 's') {
+                return;
+            }
+
             // --- Robust Help shortcut: Cmd/Ctrl + Shift + ? ---
             if (
                 isCmdOrCtrl &&
@@ -607,7 +614,7 @@
                 event.preventDefault();
                 return;
             }
-            if (event.altKey && key === 's') {
+            if (event.altKey && !event.ctrlKey && !event.metaKey && key === 's') {
                 const mainMenu = document.querySelector(CFG.selectors.mainMenu);
                 simulateClick(mainMenu);
                 event.preventDefault();
