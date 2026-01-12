@@ -74,6 +74,7 @@
 | Shortcut (Mac/Windows) | Action             |
 |:----------------------:|:-------------------|
 | ⌘/Ctrl + Shift + ?     | Open help window   |
+| Ctrl + 1–9/0           | Select gem (top-to-bottom) |
 
 */
 
@@ -134,6 +135,9 @@
             modelMenuPanel: '.mat-mdc-menu-panel',
             modelMenuContent: '.mat-mdc-menu-content',
             modelMenuItem: 'button.mat-mdc-menu-item',
+            gemListContainer: '.gems-list-container, bot-list, .bots-list-container',
+            gemListItem: 'button.bot-new-conversation-button, bot-list-item button, [data-test-id="item"] button, a[href*="/gem/"]',
+            gemListToggle: '[data-test-id="bot-list-side-nav-entry-button"] [data-test-id="side-nav-entry-button"], [data-test-id="bot-list-side-nav-entry-button"], [aria-label="Gems"]',
             newChatButton: "[data-test-id='new-chat-button'] a, [data-test-id='new-chat-button'] button, button[aria-label*='New chat'], a[aria-label*='New chat']",
             modelResponseText: '.model-response-text',
             codeTTSButton: '.response-tts-container button',
@@ -515,25 +519,73 @@
         const nextChat = () => changeChat(1);
         const previousChat = () => changeChat(-1);
 
-        // ====== Model Switching ======
-        function switchModel(modelNumber) {
-            const modelIndex = modelNumber - 1;
-            const switcher = document.querySelector(CFG.selectors.modelSwitcherButton);
-            if (!switcher) { notify('Model switcher button not found.'); return; }
-            simulateClick(switcher);
-            setTimeout(() => {
-                const panel = document.body.querySelector(CFG.selectors.modelMenuPanel);
-                const content = panel ? panel.querySelector(CFG.selectors.modelMenuContent) : null;
-                const buttons = content ? content.querySelectorAll(CFG.selectors.modelMenuItem) : null;
-                if (buttons && buttons.length && modelIndex >= 0 && modelIndex < buttons.length) {
-                    const btn = buttons[modelIndex];
-                    const name = (btn.textContent || '').trim().replace(/\s+/g, ' ') || `Model ${modelNumber}`;
-                    simulateClick(btn);
-                    notify(`Switched to ${name}`);
-                } else {
-                    notify(`Model number ${modelNumber} is invalid or not available.`);
+        // ====== Gem Selection ======
+        function getGemListScope() {
+            const containers = document.querySelectorAll(CFG.selectors.gemListContainer);
+            if (!containers.length) return document;
+            let best = null;
+            let bestCount = 0;
+            containers.forEach((container) => {
+                const count = container.querySelectorAll(CFG.selectors.gemListItem).length;
+                if (count > bestCount) {
+                    best = container;
+                    bestCount = count;
                 }
-            }, 10);
+            });
+            return best || document;
+        }
+
+        function isElementVisible(el) {
+            if (!el || el.getAttribute('aria-hidden') === 'true') return false;
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+        }
+
+        function getGemItems() {
+            const scope = getGemListScope();
+            const items = Array.from(scope.querySelectorAll(CFG.selectors.gemListItem));
+            const unique = Array.from(new Set(items));
+            const filtered = unique.filter((el) => !el.closest(CFG.selectors.conversation));
+            const visible = filtered.filter(isElementVisible);
+            const list = visible.length ? visible : filtered;
+            return list.sort((a, b) => {
+                const ra = a.getBoundingClientRect();
+                const rb = b.getBoundingClientRect();
+                if (ra.top !== rb.top) return ra.top - rb.top;
+                return ra.left - rb.left;
+            });
+        }
+
+        function selectGem(gemNumber) {
+            const attemptSelect = () => {
+                const gems = getGemItems();
+                if (!gems.length) return false;
+                const gemIndex = gemNumber - 1;
+                if (gemIndex < 0 || gemIndex >= gems.length) {
+                    notify(`Gem number ${gemNumber} is invalid or not available.`);
+                    return true;
+                }
+                const gem = gems[gemIndex];
+                const clickable = gem.matches('a, button') ? gem : gem.querySelector('a, button');
+                const target = clickable || gem;
+                const rawName = target.getAttribute('aria-label') || target.textContent || gem.textContent || '';
+                const name = rawName.trim().replace(/\s+/g, ' ') || `Gem ${gemNumber}`;
+                if (target.scrollIntoView) target.scrollIntoView({ block: 'center' });
+                simulateClick(target);
+                notify(`Selected ${name}`);
+                return true;
+            };
+
+            if (attemptSelect()) return;
+            const toggle = document.querySelector(CFG.selectors.gemListToggle);
+            if (toggle) {
+                simulateClick(toggle);
+                setTimeout(() => {
+                    if (!attemptSelect()) notify('Gem list not found.');
+                }, rapidClickDelayMS);
+            } else {
+                notify('Gem list not found.');
+            }
         }
 
         // ====== Sidebar Toggle ======
@@ -648,9 +700,9 @@
                 return;
             }
 
-            // Model switch: Ctrl + [1-9/0]
+            // Gem selection: Ctrl + [1-9/0]
             if (event.ctrlKey && keyNumber) {
-                switchModel(keyNumber);
+                selectGem(keyNumber);
                 event.preventDefault();
                 return;
             }
@@ -892,7 +944,7 @@
 
             section('Other', [
                 { key: '⌘/Ctrl + Shift + ?', action: 'Show this help' },
-                { key: 'Ctrl + 1–9/0', action: 'Switch Model (if available)' },
+                { key: 'Ctrl + 1–9/0', action: 'Select gem (top-to-bottom)' },
             ]);
 
             const h3 = document.createElement('h3'); h3.textContent = 'Disabling the Script'; popup.appendChild(h3);

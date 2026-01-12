@@ -41,7 +41,6 @@ Example:
 | ⌥/Alt + A | Scroll Up One Message |
 | ⌥/Alt + F | Scroll Down One Message |
 | ⌥/Alt + G | Scroll to Bottom of Current Response |
-| ⌥/Alt + 0-9 | Go to nth chat |
 | ⌘/Ctrl + Shift + = | Next chat |
 | ⌘/Ctrl + Shift + – | Previous chat |
 
