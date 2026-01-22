@@ -106,9 +106,12 @@
             conversation: '[data-test-id="conversation"]',
             selectedConversation: '.selected[data-test-id="conversation"], [data-test-id="conversation"][aria-selected="true"]',
             conversationTitle: '.conversation-title',
-            actionsMenuButton: '[data-test-id="actions-menu-button"]',
-            deleteButton: '[data-test-id="delete-button"]',
-            confirmButton: '[data-test-id="confirm-button"]',
+            actionsMenuButton:
+                '[data-test-id="actions-menu-button"], [data-test-id="chat-actions-menu-button"], [data-test-id="chat-actions-button"], [data-test-id="conversation-actions-button"], [data-test-id="conversation-menu-button"], button[aria-label*="Conversation options"], button[aria-label*="Chat options"], button[aria-label*="More options"], button[aria-label*="More actions"]',
+            deleteButton:
+                '[data-test-id="delete-button"], [data-test-id="delete-chat-button"], [data-test-id="delete-conversation-button"], [role="menuitem"][aria-label*="Delete"], button[aria-label*="Delete chat"], button[aria-label*="Delete conversation"]',
+            confirmButton:
+                '[data-test-id="confirm-button"], [data-test-id="confirm-delete-button"], [data-test-id="confirm-action-button"], button[aria-label*="Delete"], button[aria-label*="Confirm"]',
             textInputField: '.text-input-field',
             enterPrompt: '[aria-label="Enter a prompt here"]',
             sendMessageButton: '[aria-label="Send message"]',
@@ -455,6 +458,12 @@
 
         function simulateClick(el) { if (el) el.click(); else throw new Error('Element not found for click().'); }
 
+        function getFirstVisible(selector, scope) {
+            const root = scope || document;
+            const matches = Array.from(root.querySelectorAll(selector));
+            return matches.find(isElementVisible) || null;
+        }
+
         // ====== Drafts ======
         let draftIndex = 0;
         let googleDraftCount = 3;
@@ -757,16 +766,31 @@
                         const selectedConversation = document.querySelector(CFG.selectors.selectedConversation);
                         chatIndex = Array.from(document.querySelectorAll(CFG.selectors.conversation))
                             .indexOf(selectedConversation);
-                        const actions = selectedConversation
-                            ?.parentElement?.querySelector(CFG.selectors.actionsMenuButton);
+                        const actions = getFirstVisible(CFG.selectors.actionsMenuButton, selectedConversation)
+                            || getFirstVisible(CFG.selectors.actionsMenuButton, selectedConversation?.parentElement)
+                            || getFirstVisible(CFG.selectors.actionsMenuButton);
+                        if (!actions) {
+                            notify('Delete chat menu not found.');
+                            break;
+                        }
                         simulateClick(actions);
                         setTimeout(() => {
-                            simulateClick(document.body.querySelector(CFG.selectors.deleteButton));
+                            const deleteBtn = getFirstVisible(CFG.selectors.deleteButton);
+                            if (!deleteBtn) {
+                                notify('Delete chat action not found.');
+                                return;
+                            }
+                            simulateClick(deleteBtn);
                         }, rapidClickDelayMS);
                         setTimeout(() => {
-                            simulateClick(document.body.querySelector(CFG.selectors.confirmButton));
+                            const confirmBtn = getFirstVisible(CFG.selectors.confirmButton);
+                            if (!confirmBtn) {
+                                notify('Confirm delete not found.');
+                                return;
+                            }
+                            simulateClick(confirmBtn);
                             setTimeout(() => {
-                                if (goToNextChatOnDelete) {
+                                if (goToNextChatOnDelete && chatIndex >= 0) {
                                     const next = document.querySelectorAll(CFG.selectors.conversation)[chatIndex];
                                     if (next) simulateClick(next);
                                 }
