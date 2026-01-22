@@ -104,7 +104,7 @@
             showMoreButton: '[data-test-id="show-more-button"]',
             loadMoreButton: '[data-test-id="load-more-button"]',
             conversation: '[data-test-id="conversation"]',
-            selectedConversation: '.selected[data-test-id="conversation"]',
+            selectedConversation: '.selected[data-test-id="conversation"], [data-test-id="conversation"][aria-selected="true"]',
             conversationTitle: '.conversation-title',
             actionsMenuButton: '[data-test-id="actions-menu-button"]',
             deleteButton: '[data-test-id="delete-button"]',
@@ -238,7 +238,15 @@
             currentIndex = direction === 1 ? -1 : 0;
         }
 
-        const targetIndex = direction === 1 ? currentIndex + 1 : currentIndex - 1;
+        let targetIndex = -1;
+        if (direction === 1) {
+            targetIndex = currentIndex + 1;
+        } else if (currentIndex !== -1) {
+            const currentRect = turnInfos[currentIndex].rect;
+            const topSnapSlack = 12; // Treat as "at top" if within a small slack of the viewport top.
+            const nearTop = currentRect.top >= -topSnapSlack;
+            targetIndex = nearTop ? currentIndex - 1 : currentIndex;
+        }
         const target = turnInfos[targetIndex] ? turnInfos[targetIndex].el : null;
 
         if (target) {
@@ -746,9 +754,10 @@
                     }
                     case 'backspace': {
                         event.preventDefault();
+                        const selectedConversation = document.querySelector(CFG.selectors.selectedConversation);
                         chatIndex = Array.from(document.querySelectorAll(CFG.selectors.conversation))
-                            .indexOf(document.querySelector(CFG.selectors.selectedConversation));
-                        const actions = document.querySelector('.conversation.selected')
+                            .indexOf(selectedConversation);
+                        const actions = selectedConversation
                             ?.parentElement?.querySelector(CFG.selectors.actionsMenuButton);
                         simulateClick(actions);
                         setTimeout(() => {
