@@ -1,6 +1,12 @@
 # GeminiPilot
-
 **Original link:** https://greasyfork.org/en/scripts/498823-gemini-keyboard-shortcuts-power-tweaks
+## 安装渠道
+
+官方渠道✅:
+
+| 序号 | UserScript源 | 备注 |
+| --- | --- | --- |
+| 1 | [Github开源社区](https://raw.githubusercontent.com/crazyn2/Gemini_Keyboard_Shortcuts/main/geminiShortcuts.user.js) | ✅推荐 |
 
 Fixed toggle sidebar bug and modified some keyboard shortcuts.
 

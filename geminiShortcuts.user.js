@@ -1,18 +1,18 @@
 // ==UserScript==
 // @name         Gemini Keyboard Shortcuts (Power Tweaks)
 // @namespace    http://tampermonkey.net/
-// @version      1.3.5
+// @version      1.3.6
 // @description  Power-user hotkeys for Gemini with Win11 fixes, URL param prefill, and a centralized config for selectors & shortcuts. New Chat = ⌘/Ctrl+Shift+O, Sidebar Toggle = ⌘/Ctrl+B.
 // @license      MIT
 // @author       Henry Getz
 // @match        https://gemini.google.com/*
 // @match        https://gemini.google.com/u/*
 // @match        https://gemini.google.com/app*
-// @supportURL   https://github.com/HenryGetz/GeminiPilot/issues
+// @supportURL   https://github.com/crazyn2/Gemini_Keyboard_Shortcuts/issues
 // @grant        none
 // @run-at       document-start
-// @downloadURL https://update.greasyfork.org/scripts/559442/Gemini%20Keyboard%20Shortcuts%20%28Power%20Tweaks%29.user.js
-// @updateURL https://update.greasyfork.org/scripts/559442/Gemini%20Keyboard%20Shortcuts%20%28Power%20Tweaks%29.meta.js
+// @downloadURL https://raw.githubusercontent.com/crazyn2/Gemini_Keyboard_Shortcuts/main/geminiShortcuts.user.js
+// @updateURL https://raw.githubusercontent.com/crazyn2/Gemini_Keyboard_Shortcuts/main/geminiShortcuts.user.js
 // ==/UserScript==
 /*
 
