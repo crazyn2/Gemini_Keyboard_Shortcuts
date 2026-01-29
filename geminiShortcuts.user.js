@@ -88,6 +88,9 @@
             assumeLastResponse: false,
             goToNextChatOnDelete: true,
             defaultModelNumber: 3,
+            defaultModelRetryLimit: 8,
+            defaultModelRetryDelayMS: 300,
+            enableWidePage: true,
         },
         timings: { rapidClickDelayMS: 100 },
         hotkeys: {
@@ -153,7 +156,14 @@
         },
     };
 
-    const { assumeLastResponse, goToNextChatOnDelete, defaultModelNumber } = CFG.behavior;
+    const {
+        assumeLastResponse,
+        goToNextChatOnDelete,
+        defaultModelNumber,
+        defaultModelRetryLimit,
+        defaultModelRetryDelayMS,
+        enableWidePage,
+    } = CFG.behavior;
     const { rapidClickDelayMS } = CFG.timings;
 
     const hasQuery = window.location.href.includes('?q=');
@@ -318,11 +328,13 @@
         // ----- CSS tweaks (minimal & intentional) -----
         const s = document.createElement('style');
         document.head.append(s);
-        s.textContent = `
+        const widePageCSS = enableWidePage ? `
       .conversation-container, .input-area-container, .bottom-container, user-query {
         max-width: -webkit-fill-available !important;
         max-width: fill-available !important;
-      }
+      }` : '';
+        s.textContent = `
+      ${widePageCSS}
       #gbwa, .cdk-overlay-backdrop { display: none !important; }
       .code-block-decoration.footer, .code-block-decoration.header {
         user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
@@ -389,13 +401,6 @@
             if (showMoreClicked && inputBarClicked) initialObserver.disconnect();
         });
         initialObserver.observe(document.body, { childList: true, subtree: true });
-
-        // Default model (Pro = #3)
-        const modelObserver = new MutationObserver(() => {
-            if (ensureDefaultModel()) modelObserver.disconnect();
-        });
-        modelObserver.observe(document.body, { childList: true, subtree: true });
-        setTimeout(() => { ensureDefaultModel(); }, rapidClickDelayMS * 8);
 
         // ====== Helpers ======
         let c = null;
@@ -473,11 +478,13 @@
         }
 
         // ====== Model Switching ======
-        function switchModel(modelNumber) {
+        function switchModel(modelNumber, options = {}) {
+            const { silent = false, onDone } = options;
             const modelIndex = modelNumber - 1;
             const switcher = document.querySelector(CFG.selectors.modelSwitcherButton);
             if (!switcher) {
-                notify('Model switcher button not found.');
+                if (!silent) notify('Model switcher button not found.');
+                if (onDone) onDone(false);
                 return false;
             }
             simulateClick(switcher);
@@ -489,22 +496,55 @@
                     const btn = buttons[modelIndex];
                     const name = (btn.textContent || '').trim().replace(/\s+/g, ' ') || `Model ${modelNumber}`;
                     simulateClick(btn);
-                    notify(`Switched to ${name}`);
+                    if (!silent) notify(`Switched to ${name}`);
+                    if (onDone) onDone(true);
                 } else {
-                    notify(`Model number ${modelNumber} is invalid or not available.`);
+                    if (!silent) notify(`Model number ${modelNumber} is invalid or not available.`);
+                    if (onDone) onDone(false);
                 }
             }, rapidClickDelayMS);
             return true;
         }
 
         let defaultModelApplied = false;
+        let defaultModelAttempting = false;
+        let defaultModelAttempts = 0;
         function ensureDefaultModel() {
-            if (!defaultModelNumber || defaultModelApplied) return true;
+            if (!defaultModelNumber || defaultModelApplied || defaultModelAttempting) return defaultModelApplied;
+            if (defaultModelAttempts >= defaultModelRetryLimit) return true;
             const switcher = document.querySelector(CFG.selectors.modelSwitcherButton);
             if (!switcher) return false;
-            defaultModelApplied = true;
-            return switchModel(defaultModelNumber);
+            defaultModelAttempting = true;
+            defaultModelAttempts += 1;
+            return switchModel(defaultModelNumber, {
+                silent: true,
+                onDone: (success) => {
+                    defaultModelAttempting = false;
+                    if (success) {
+                        defaultModelApplied = true;
+                        return;
+                    }
+                    if (defaultModelAttempts < defaultModelRetryLimit) {
+                        setTimeout(() => ensureDefaultModel(), defaultModelRetryDelayMS);
+                    }
+                },
+            });
         }
+
+        // Default model (Pro = #3)
+        const modelObserver = new MutationObserver(() => {
+            ensureDefaultModel();
+            if (defaultModelApplied || defaultModelAttempts >= defaultModelRetryLimit) {
+                modelObserver.disconnect();
+            }
+        });
+        modelObserver.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => {
+            ensureDefaultModel();
+            if (defaultModelApplied || defaultModelAttempts >= defaultModelRetryLimit) {
+                modelObserver.disconnect();
+            }
+        }, rapidClickDelayMS * 8);
 
         // ====== Drafts ======
         let draftIndex = 0;
