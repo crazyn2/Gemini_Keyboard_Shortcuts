@@ -87,6 +87,7 @@
         behavior: {
             assumeLastResponse: false,
             goToNextChatOnDelete: true,
+            defaultModelNumber: 3,
         },
         timings: { rapidClickDelayMS: 100 },
         hotkeys: {
@@ -152,7 +153,7 @@
         },
     };
 
-    const { assumeLastResponse, goToNextChatOnDelete } = CFG.behavior;
+    const { assumeLastResponse, goToNextChatOnDelete, defaultModelNumber } = CFG.behavior;
     const { rapidClickDelayMS } = CFG.timings;
 
     const hasQuery = window.location.href.includes('?q=');
@@ -389,6 +390,13 @@
         });
         initialObserver.observe(document.body, { childList: true, subtree: true });
 
+        // Default model (Pro = #3)
+        const modelObserver = new MutationObserver(() => {
+            if (ensureDefaultModel()) modelObserver.disconnect();
+        });
+        modelObserver.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => { ensureDefaultModel(); }, rapidClickDelayMS * 8);
+
         // ====== Helpers ======
         let c = null;
         function getLastElement(querySelector) {
@@ -462,6 +470,40 @@
             const root = scope || document;
             const matches = Array.from(root.querySelectorAll(selector));
             return matches.find(isElementVisible) || null;
+        }
+
+        // ====== Model Switching ======
+        function switchModel(modelNumber) {
+            const modelIndex = modelNumber - 1;
+            const switcher = document.querySelector(CFG.selectors.modelSwitcherButton);
+            if (!switcher) {
+                notify('Model switcher button not found.');
+                return false;
+            }
+            simulateClick(switcher);
+            setTimeout(() => {
+                const panel = document.body.querySelector(CFG.selectors.modelMenuPanel);
+                const content = panel ? panel.querySelector(CFG.selectors.modelMenuContent) : null;
+                const buttons = content ? content.querySelectorAll(CFG.selectors.modelMenuItem) : null;
+                if (buttons && buttons.length && modelIndex >= 0 && modelIndex < buttons.length) {
+                    const btn = buttons[modelIndex];
+                    const name = (btn.textContent || '').trim().replace(/\s+/g, ' ') || `Model ${modelNumber}`;
+                    simulateClick(btn);
+                    notify(`Switched to ${name}`);
+                } else {
+                    notify(`Model number ${modelNumber} is invalid or not available.`);
+                }
+            }, rapidClickDelayMS);
+            return true;
+        }
+
+        let defaultModelApplied = false;
+        function ensureDefaultModel() {
+            if (!defaultModelNumber || defaultModelApplied) return true;
+            const switcher = document.querySelector(CFG.selectors.modelSwitcherButton);
+            if (!switcher) return false;
+            defaultModelApplied = true;
+            return switchModel(defaultModelNumber);
         }
 
         // ====== Drafts ======
