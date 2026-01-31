@@ -88,8 +88,11 @@
             assumeLastResponse: false,
             goToNextChatOnDelete: true,
             defaultModelNumber: 3,
+            defaultModelNameMatches: ['pro'],
             defaultModelRetryLimit: 8,
             defaultModelRetryDelayMS: 300,
+            defaultModelReapplyOnChatChange: true,
+            defaultModelReapplyDelayMS: 400,
             enableWidePage: true,
         },
         timings: { rapidClickDelayMS: 100 },
@@ -160,8 +163,11 @@
         assumeLastResponse,
         goToNextChatOnDelete,
         defaultModelNumber,
+        defaultModelNameMatches,
         defaultModelRetryLimit,
         defaultModelRetryDelayMS,
+        defaultModelReapplyOnChatChange,
+        defaultModelReapplyDelayMS,
         enableWidePage,
     } = CFG.behavior;
     const { rapidClickDelayMS } = CFG.timings;
@@ -477,6 +483,21 @@
             return matches.find(isElementVisible) || null;
         }
 
+        function getCurrentModelLabel() {
+            const switcher = document.querySelector(CFG.selectors.modelSwitcherButton);
+            if (!switcher) return '';
+            const label = switcher.getAttribute('aria-label') || switcher.textContent || '';
+            return label.trim().replace(/\s+/g, ' ');
+        }
+
+        function isCurrentModelTarget() {
+            if (!defaultModelNameMatches || !defaultModelNameMatches.length) return false;
+            const label = getCurrentModelLabel();
+            if (!label) return false;
+            const normalized = label.toLowerCase();
+            return defaultModelNameMatches.some((match) => normalized.includes(String(match).toLowerCase()));
+        }
+
         // ====== Model Switching ======
         function switchModel(modelNumber, options = {}) {
             const { silent = false, onDone } = options;
@@ -511,6 +532,10 @@
         let defaultModelAttempts = 0;
         function ensureDefaultModel() {
             if (!defaultModelNumber || defaultModelApplied || defaultModelAttempting) return defaultModelApplied;
+            if (isCurrentModelTarget()) {
+                defaultModelApplied = true;
+                return true;
+            }
             if (defaultModelAttempts >= defaultModelRetryLimit) return true;
             const switcher = document.querySelector(CFG.selectors.modelSwitcherButton);
             if (!switcher) return false;
@@ -531,20 +556,96 @@
             });
         }
 
+        function resetDefaultModelState() {
+            defaultModelApplied = false;
+            defaultModelAttempting = false;
+            defaultModelAttempts = 0;
+        }
+
+        let modelObserver = null;
+        function startDefaultModelObserver() {
+            if (!defaultModelNumber) return;
+            if (modelObserver) {
+                modelObserver.disconnect();
+                modelObserver = null;
+            }
+            modelObserver = new MutationObserver(() => {
+                ensureDefaultModel();
+                if (defaultModelApplied || defaultModelAttempts >= defaultModelRetryLimit) {
+                    modelObserver.disconnect();
+                    modelObserver = null;
+                }
+            });
+            modelObserver.observe(document.body, { childList: true, subtree: true });
+            setTimeout(() => {
+                ensureDefaultModel();
+                if (defaultModelApplied || defaultModelAttempts >= defaultModelRetryLimit) {
+                    if (modelObserver) {
+                        modelObserver.disconnect();
+                        modelObserver = null;
+                    }
+                }
+            }, rapidClickDelayMS * 8);
+        }
+
+        let defaultModelReapplyTimer = null;
+        function scheduleDefaultModelReapply() {
+            if (!defaultModelReapplyOnChatChange || !defaultModelNumber) return;
+            resetDefaultModelState();
+            if (defaultModelReapplyTimer) clearTimeout(defaultModelReapplyTimer);
+            defaultModelReapplyTimer = setTimeout(() => {
+                defaultModelReapplyTimer = null;
+                startDefaultModelObserver();
+            }, defaultModelReapplyDelayMS);
+        }
+
+        function getConversationKey() {
+            const selected = document.querySelector(CFG.selectors.selectedConversation);
+            const selectedKey = selected
+                ? (selected.getAttribute('data-id') ||
+                    selected.getAttribute('data-conversation-id') ||
+                    selected.getAttribute('href') ||
+                    selected.textContent ||
+                    '')
+                : '';
+            const urlKey = `${window.location.pathname}${window.location.search}`;
+            return `${urlKey}::${selectedKey.trim()}`;
+        }
+
+        let lastConversationKey = '';
+        let conversationCheckScheduled = false;
+        function checkConversationChange() {
+            const key = getConversationKey();
+            if (!key || key === lastConversationKey) return;
+            lastConversationKey = key;
+            scheduleDefaultModelReapply();
+        }
+
+        function scheduleConversationCheck() {
+            if (conversationCheckScheduled) return;
+            conversationCheckScheduled = true;
+            setTimeout(() => {
+                conversationCheckScheduled = false;
+                checkConversationChange();
+            }, rapidClickDelayMS);
+        }
+
         // Default model (Pro = #3)
-        const modelObserver = new MutationObserver(() => {
-            ensureDefaultModel();
-            if (defaultModelApplied || defaultModelAttempts >= defaultModelRetryLimit) {
-                modelObserver.disconnect();
-            }
-        });
-        modelObserver.observe(document.body, { childList: true, subtree: true });
-        setTimeout(() => {
-            ensureDefaultModel();
-            if (defaultModelApplied || defaultModelAttempts >= defaultModelRetryLimit) {
-                modelObserver.disconnect();
-            }
-        }, rapidClickDelayMS * 8);
+        startDefaultModelObserver();
+
+        if (defaultModelReapplyOnChatChange) {
+            lastConversationKey = getConversationKey();
+            const conversationObserver = new MutationObserver(() => {
+                scheduleConversationCheck();
+            });
+            conversationObserver.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'aria-selected', 'href'],
+            });
+            window.addEventListener('popstate', scheduleConversationCheck);
+        }
 
         // ====== Drafts ======
         let draftIndex = 0;
